@@ -25,40 +25,30 @@ contract FlashSwap is IUniswapV2Callee {
   // ================== constants ==================
   address private constant UNI_V2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
   address private constant UNI_V2_PAIR = 0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11;
-  address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-  address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-  // uint private constant BPS = 1e4;
-  // uint private constant FEE_BPS = 30;
 
-  ///  @dev deltay = FF * y * deltax / x + FFdeltaX
-  // function getAmount0Out(uint amountIn) public view returns (uint amountOut) {
-  //     (uint reserveOut, uint reserveIn,) = IUniswapV2Pair(UNI_V2_PAIR).getReserves();
-  //     uint feeFactor = BPS - FEE_BPS;
-  //     uint numerator = feeFactor * reserveOut * amountIn;
-  //     uint denominator = BPS * reserveIn + amountIn * feeFactor;
-  //     amountOut = numerator / denominator;
-  // }
   modifier onlyV2Pair() {
     require(msg.sender == UNI_V2_PAIR, 'Not UniswapV2 Pair');
     _;
   }
 
-  function getAmount0Out(uint _amountIn) public view returns (uint amountOut) {
+  function getAmountOut(
+    uint _amountIn,
+    address _tokenIn,
+    address _tokenOut
+  ) public view returns (uint[] memory amounts) {
     address[] memory path = new address[](2);
-    path[0] = WETH;
-    path[1] = DAI;
+    path[0] = _tokenIn;
+    path[1] = _tokenOut;
     (, bytes memory amountOutData) = UNI_V2_ROUTER.staticcall(
       abi.encodeWithSignature('getAmountsOut(uint256,address[])', _amountIn, path)
     );
-    console2.logBytes(amountOutData);
-    uint[] memory amounts = abi.decode(amountOutData, (uint[]));
-    amountOut = amounts[0];
+    amounts = abi.decode(amountOutData, (uint[]));
   }
 
-  function swapExactToken1In(uint _amountIn) external {
-    uint amountOut = getAmount0Out(_amountIn);
-    bytes memory data = abi.encode(_amountIn);
-    IUniswapV2Pair(UNI_V2_PAIR).swap(amountOut, 0, address(this), data);
+  function swapExactTokenIn(uint _amountIn, address _tokenIn, address _tokenOut) external {
+    uint[] memory amounts = getAmountOut(_amountIn, _tokenIn, _tokenOut);
+    bytes memory data = abi.encode(amounts[0], _tokenIn);
+    IUniswapV2Pair(UNI_V2_PAIR).swap(amounts[1], 0, address(this), data);
   }
 
   function uniswapV2Call(
@@ -67,7 +57,7 @@ contract FlashSwap is IUniswapV2Callee {
     uint _amount1,
     bytes calldata data
   ) external onlyV2Pair {
-    uint amountIn = abi.decode(data, (uint));
-    IERC20(WETH).transfer(UNI_V2_PAIR, amountIn);
+    (uint amountIn, address tokenIn) = abi.decode(data, (uint, address));
+    IERC20(tokenIn).transfer(UNI_V2_PAIR, amountIn);
   }
 }
