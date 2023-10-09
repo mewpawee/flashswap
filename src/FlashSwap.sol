@@ -18,18 +18,26 @@ contract FlashSwap is IUniswapV2Callee {
     // 30/10000 -> 0.003 in decimals which is 0.3%
 
     // ================== constants ==================
+    address private constant UNI_V2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address private constant UNI_V2_PAIR = 0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    uint256 private constant BPS = 1e4;
-    uint256 private constant FEE_BPS = 30;
+    // uint256 private constant BPS = 1e4;
+    // uint256 private constant FEE_BPS = 30;
 
     ///  @dev deltay = FF * y * deltax / x + FFdeltaX
+    // function getAmount0Out(uint256 amountIn) public view returns (uint256 amountOut) {
+    //     (uint256 reserveOut, uint256 reserveIn,) = IUniswapV2Pair(UNI_V2_PAIR).getReserves();
+    //     uint256 feeFactor = BPS - FEE_BPS;
+    //     uint256 numerator = feeFactor * reserveOut * amountIn;
+    //     uint256 denominator = BPS * reserveIn + amountIn * feeFactor;
+    //     amountOut = numerator / denominator;
+    // }
     function getAmount0Out(uint256 amountIn) public view returns (uint256 amountOut) {
         (uint256 reserveOut, uint256 reserveIn,) = IUniswapV2Pair(UNI_V2_PAIR).getReserves();
-        uint256 feeFactor = BPS - FEE_BPS;
-        uint256 numerator = feeFactor * reserveOut * amountIn;
-        uint256 denominator = BPS * reserveIn + amountIn * feeFactor;
-        amountOut = numerator / denominator;
+        (, bytes memory data) = UNI_V2_ROUTER.staticcall(
+            abi.encodeWithSignature("getAmountOut(uint256,uint256,uint256)", amountIn, reserveIn, reserveOut)
+        );
+        amountOut = abi.decode(data, (uint256));
     }
 
     function swapExactToken1In(uint256 amountIn) external {
