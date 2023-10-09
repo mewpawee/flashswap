@@ -21,12 +21,12 @@ contract FlashSwap is IUniswapV2Callee {
     address private constant UNI_V2_PAIR = 0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11;
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 private constant BPS = 1e4;
-    uint256 private constant fee = 30;
+    uint256 private constant FEE_BPS = 30;
 
     ///  @dev deltay = FF * y * deltax / x + FFdeltaX
     function getAmount0Out(uint256 amountIn) public view returns (uint256 amountOut) {
         (uint256 reserveOut, uint256 reserveIn,) = IUniswapV2Pair(UNI_V2_PAIR).getReserves();
-        uint256 feeFactor = BPS - fee;
+        uint256 feeFactor = BPS - FEE_BPS;
         uint256 numerator = feeFactor * reserveOut * amountIn;
         uint256 denominator = BPS * reserveIn + amountIn * feeFactor;
         amountOut = numerator / denominator;
@@ -35,12 +35,12 @@ contract FlashSwap is IUniswapV2Callee {
     function swapExactToken1In(uint256 amountIn) external {
         address uniV2PAIR = UNI_V2_PAIR;
         uint256 amountOut = getAmount0Out(amountIn);
-        bytes memory data = abi.encode(uniV2PAIR, amountIn);
+        bytes memory data = abi.encode(amountIn);
         IUniswapV2Pair(uniV2PAIR).swap(amountOut, 0, address(this), data);
     }
 
     function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external {
-        (address pairAddress, uint256 amountIn) = abi.decode(data, (address, uint256));
-        IERC20(WETH).transfer(pairAddress, amountIn);
+        (uint256 amountIn) = abi.decode(data, (uint256));
+        IERC20(WETH).transfer(UNI_V2_PAIR, amountIn);
     }
 }
