@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.19;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {FlashSwap} from "../src/FlashSwap.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract FlashSwapTest is Test {
     FlashSwap public flashSwap;
