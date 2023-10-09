@@ -33,10 +33,9 @@ contract FlashSwap is IUniswapV2Callee {
     }
 
     function swapExactToken1In(uint256 amountIn) external {
-        address uniV2PAIR = UNI_V2_PAIR;
         uint256 amountOut = getAmount0Out(amountIn);
         bytes memory data = abi.encode(amountIn);
-        IUniswapV2Pair(uniV2PAIR).swap(amountOut, 0, address(this), data);
+        IUniswapV2Pair(UNI_V2_PAIR).swap(amountOut, 0, address(this), data);
     }
 
     function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external {
