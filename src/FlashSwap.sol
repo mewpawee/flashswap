@@ -18,6 +18,10 @@ interface IUniswapV2Pair {
     returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
 }
 
+interface IUniswapV2Factory {
+  function getPair(address tokenA, address tokenB) external view returns (address pair);
+}
+
 contract FlashSwap is IUniswapV2Callee {
   using SafeERC20 for IERC20;
   // DAI token0, WETH token1
@@ -29,14 +33,14 @@ contract FlashSwap is IUniswapV2Callee {
 
   // ================== constants ==================
   address private constant UNI_V2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-  address private constant UNI_V2_PAIR = 0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11;
+  address private constant UNI_V2_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
-  modifier onlyV2Pair() {
-    if (msg.sender != UNI_V2_PAIR) {
-      revert NotV2Pair();
-    }
-    _;
-  }
+  // modifier onlyV2Pair() {
+  //   if (msg.sender != UNI_V2_PAIR) {
+  //     revert NotV2Pair();
+  //   }
+  //   _;
+  // }
 
   modifier onlyFromThisContract(address _sender) {
     if (_sender != address(this)) {
@@ -62,8 +66,9 @@ contract FlashSwap is IUniswapV2Callee {
   //slippage control
   function swapExactTokenIn(uint _amountIn, address _tokenIn, address _tokenOut) external {
     uint[] memory amounts = getAmountOut(_amountIn, _tokenIn, _tokenOut);
-    bytes memory data = abi.encode(amounts[0], _tokenIn);
-    IUniswapV2Pair(UNI_V2_PAIR).swap(amounts[1], 0, address(this), data);
+    bytes memory data = abi.encode(amounts[0], _tokenIn, _tokenOut);
+    address pair = IUniswapV2Factory(UNI_V2_FACTORY).getPair(_tokenIn, _tokenOut);
+    IUniswapV2Pair(pair).swap(amounts[1], 0, address(this), data);
   }
 
   function uniswapV2Call(
@@ -71,8 +76,12 @@ contract FlashSwap is IUniswapV2Callee {
     uint _amount0,
     uint _amount1,
     bytes calldata data
-  ) external onlyV2Pair onlyFromThisContract(_sender) {
-    (uint amountIn, address tokenIn) = abi.decode(data, (uint, address));
-    IERC20(tokenIn).safeTransfer(UNI_V2_PAIR, amountIn);
+  ) external onlyFromThisContract(_sender) {
+    (uint amountIn, address tokenIn, address tokenOut) = abi.decode(data, (uint, address, address));
+    address pair = IUniswapV2Factory(UNI_V2_FACTORY).getPair(tokenIn, tokenOut);
+    if (msg.sender != pair) {
+      revert NotV2Pair();
+    }
+    IERC20(tokenIn).safeTransfer(pair, amountIn);
   }
 }
