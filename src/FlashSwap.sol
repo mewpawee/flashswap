@@ -51,12 +51,8 @@ contract FlashSwap is IUniswapV2Callee {
 
   function getAmountOut(
     uint _amountIn,
-    address _tokenIn,
-    address _tokenOut
+    address[] memory path
   ) public view returns (uint[] memory amounts) {
-    address[] memory path = new address[](2);
-    path[0] = _tokenIn;
-    path[1] = _tokenOut;
     (, bytes memory amountOutData) = UNI_V2_ROUTER.staticcall(
       abi.encodeWithSignature('getAmountsOut(uint256,address[])', _amountIn, path)
     );
@@ -64,10 +60,10 @@ contract FlashSwap is IUniswapV2Callee {
   }
 
   //slippage control
-  function swapExactTokenIn(uint _amountIn, address _tokenIn, address _tokenOut) external {
-    uint[] memory amounts = getAmountOut(_amountIn, _tokenIn, _tokenOut);
-    bytes memory data = abi.encode(amounts[0], _tokenIn, _tokenOut);
-    address pair = IUniswapV2Factory(UNI_V2_FACTORY).getPair(_tokenIn, _tokenOut);
+  function swapExactTokenIn(uint _amountIn, address[] memory path) external {
+    uint[] memory amounts = getAmountOut(_amountIn, path);
+    bytes memory data = abi.encode(amounts[0], path[0], path[1]);
+    address pair = IUniswapV2Factory(UNI_V2_FACTORY).getPair(path[0], path[1]);
     IUniswapV2Pair(pair).swap(amounts[1], 0, address(this), data);
   }
 

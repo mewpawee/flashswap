@@ -19,8 +19,11 @@ contract FlashSwapTest is Test {
 
   function testSwapWETHtoDAI() public {
     deal(WETH, address(flashSwap), swapAmount);
-    uint256[] memory amounts = flashSwap.getAmountOut(swapAmount, WETH, DAI);
-    flashSwap.swapExactTokenIn(swapAmount, WETH, DAI);
+    address[] memory path = new address[](2);
+    path[0] = WETH;
+    path[1] = DAI;
+    uint256[] memory amounts = flashSwap.getAmountOut(swapAmount, path);
+    flashSwap.swapExactTokenIn(swapAmount, path);
     uint256 currentBalance = IERC20(DAI).balanceOf(address(flashSwap));
     console2.log('expectedDAIBalance', amounts[1]);
     console2.log('currentDAIBalance', currentBalance);
@@ -29,8 +32,11 @@ contract FlashSwapTest is Test {
 
   function testSwapDAItoETH() public {
     deal(DAI, address(flashSwap), swapAmount);
-    uint256[] memory amounts = flashSwap.getAmountOut(swapAmount, DAI, WETH);
-    flashSwap.swapExactTokenIn(swapAmount, DAI, WETH);
+    address[] memory path = new address[](2);
+    path[0] = DAI;
+    path[1] = WETH;
+    uint256[] memory amounts = flashSwap.getAmountOut(swapAmount, path);
+    flashSwap.swapExactTokenIn(swapAmount, path);
     uint256 currentBalance = IERC20(DAI).balanceOf(address(flashSwap));
     console2.log('expectedWETHBalance', amounts[1]);
     console2.log('currentWETHBalance', currentBalance);
