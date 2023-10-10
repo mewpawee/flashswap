@@ -49,7 +49,16 @@ contract FlashSwap is IUniswapV2Callee {
     _;
   }
 
-  function getAmountOut(
+  function sortTokens(
+    address tokenA,
+    address tokenB
+  ) internal pure returns (address token0, address token1) {
+    require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
+    (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    require(token0 != address(0), 'UniswapV2Library: ZERO_ADDRESS');
+  }
+
+  function getAmountsOut(
     uint _amountIn,
     address[] memory path
   ) public view returns (uint[] memory amounts) {
@@ -59,12 +68,20 @@ contract FlashSwap is IUniswapV2Callee {
     amounts = abi.decode(amountOutData, (uint[]));
   }
 
-  //slippage control
+  //token0, token1 might not in the order that we use on path
   function swapExactTokenIn(uint _amountIn, address[] memory path) external {
-    uint[] memory amounts = getAmountOut(_amountIn, path);
-    bytes memory data = abi.encode(amounts[0], path[0], path[1]);
-    address pair = IUniswapV2Factory(UNI_V2_FACTORY).getPair(path[0], path[1]);
-    IUniswapV2Pair(pair).swap(amounts[1], 0, address(this), data);
+    uint[] memory amounts = getAmountsOut(_amountIn, path);
+    for (uint i = 0; i < path.length - 1; i++) {
+      (address tokenIn, address tokenOut) = (path[i], path[i + 1]);
+      (address token0, ) = sortTokens(tokenIn, tokenOut);
+      uint amountOut = amounts[i + 1];
+      (uint amount0Out, uint amount1Out) = tokenIn == token0
+        ? (uint(0), amountOut)
+        : (amountOut, uint(0));
+      bytes memory data = abi.encode(amounts[i], tokenIn, tokenOut);
+      address pair = IUniswapV2Factory(UNI_V2_FACTORY).getPair(path[i], path[i + 1]);
+      IUniswapV2Pair(pair).swap(amount0Out, amount1Out, address(this), data);
+    }
   }
 
   function uniswapV2Call(
