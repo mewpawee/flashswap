@@ -49,6 +49,7 @@ contract FlashSwap is IUniswapV2Callee {
     _;
   }
 
+  ///@dev sort the tokens from UniswapV2Library
   function sortTokens(
     address tokenA,
     address tokenB
@@ -68,7 +69,6 @@ contract FlashSwap is IUniswapV2Callee {
     amounts = abi.decode(amountOutData, (uint[]));
   }
 
-  //token0, token1 might not in the order that we use on path
   function swapExactTokenIn(uint _amountIn, address[] memory path) external {
     uint[] memory amounts = getAmountsOut(_amountIn, path);
     for (uint i = 0; i < path.length - 1; i++) {
@@ -91,10 +91,12 @@ contract FlashSwap is IUniswapV2Callee {
     bytes calldata data
   ) external onlyFromThisContract(_sender) {
     (uint amountIn, address tokenIn, address tokenOut) = abi.decode(data, (uint, address, address));
+    // check if it called from the v2 correct pair
     address pair = IUniswapV2Factory(UNI_V2_FACTORY).getPair(tokenIn, tokenOut);
     if (msg.sender != pair) {
       revert NotV2Pair();
     }
+
     IERC20(tokenIn).safeTransfer(pair, amountIn);
   }
 }
